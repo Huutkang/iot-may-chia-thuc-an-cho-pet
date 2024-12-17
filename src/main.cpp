@@ -44,6 +44,7 @@ unsigned long time7=0;
 bool hasSetup = false; // đã gọi thú cưng
 bool motionNoti = false; // thông báo cử động
 int totalFood = 0;
+int hungry = 0; // dành cho thông báo thú cưng đói
 
 // Hàm callback cho Software Timer (Timer phần mềm của hệ thống, esp8266 có duy nhất 1 timer phần cứng và được dùng cho wifi rồi)
 // dùng riêng cái này cho động cơ, dùng hàm Timer bên dưới thì nó lag. còn nếu tất cả dùng timer này thì cũng lag như nhau
@@ -75,7 +76,7 @@ void updateStatus() {
         }
     }
     if (status && !hasSetup){
-        int revolutions = foodAmount/2; // mỗi mức cho ăn quay nữa vòng, 1/2 là hằng số cho ăn, có thể đổi
+        int revolutions = foodAmount*2/3; // mỗi mức cho ăn quay nữa vòng, 2/3 là hằng số cho ăn, có thể đổi
         setRotate(revolutions);
         setCalls(5);
         speakerOn = true;
@@ -89,6 +90,7 @@ void updateStatus() {
         hasSetup = false;
         totalFood = totalFood + foodAmount;
         publishData("food", String(foodAmount).c_str());
+        hungry = 1440;
     }
 }
 
@@ -149,6 +151,14 @@ void loop() {
         if (totalFood>0){
             String message = String("SUM ") + String(totalFood);
             publishData("food", message.c_str()); // thông báo tổng số lượng thức thức ăn cho thú cưng trong ngày
+        }
+        if (hungry>0){
+            hungry--;
+        }else{
+            if (motionNoti){
+                publishData("noti", "2"); // thông báo thú cưng đói
+                hungry = 600; // 10 phút sau thông báo lại
+            }
         }
     }
     
