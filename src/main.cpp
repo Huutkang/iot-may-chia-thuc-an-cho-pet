@@ -145,9 +145,9 @@ void loop() {
             publishData("noti", "0");
         }
         if (sensor[1]){
-            publishData("food", "0"); // hơi ngược một tí. do cảm biến. 
-        }else{
             publishData("food", "1");
+        }else{
+            publishData("food", "0");
         }
         if (totalFood>0){
             String message = String("SUM ") + String(totalFood);
