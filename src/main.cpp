@@ -34,7 +34,7 @@ unsigned long time5=0;
 unsigned long time6=0;
 unsigned long time7=0;
 
-
+bool hasSetup = false; // đã gọi thú cưng
 
 // với kiểu dữ liệu unsigned long: 10 - 4294967295 = 11 nên không lo tràn số ở hàm millis nhé
 // Ưu điểm: không dùng delay
@@ -50,18 +50,32 @@ int Timer(unsigned long *time, int wait){
 }
 
 void updateStatus() {
-    if (!isAuto) {
-        return;
+    if (isAuto) {
+        if (feeding_timer) {
+            status = true;
+            feeding_timer = false; // Reset lại bộ hẹn giờ
+            
+        }
     }
-    if (feeding_timer) {
-        motorStatus = true;
-        feeding_timer = false; // Reset lại bộ hẹn giờ
+    if (status && !hasSetup){
+        int revolutions = foodAmount/2; // mỗi mức cho ăn quay nữa vòng, 1/2 là hằng số cho ăn, có thể đổi
+        setRotate(revolutions);
+        setCalls(5);
+        speakerOn = true;
+        hasSetup = true;
+    }
+    if (status && sensor[0]){
+        setCalls(1);
+        speakerOn = true;
+        status = false;
+        motorOn = true;
+        hasSetup = false;
     }
 }
 
 
 void setup() {
-    setupSpeaker(int SPEAKER);
+    setupSpeaker(SPEAKER);
     setupMotor(IN1, IN2, IN3, IN4);
     setupSensors(MOTIONSENSOR, FOODSENSOR);
     Serial.begin(115200);
@@ -80,30 +94,34 @@ void loop() {
     if (Timer(&time2,500)){
         readSensors();                
     }
-    if (Timer(&time3,500)){
-        // tính toán góc
-
-        // bật động cơ
-        setRotate(float revolutions);
-    }
-    if (Timer(&time4,990)){ // thay đổi trạng thái
+    if (Timer(&time3,400)){ // thay đổi trạng thái
         updateStatus(); // thay đổi trạng thái máy cho ăn
         
     }
-    if (Timer(&time5,991)){ // hẹn giờ
+    if (Timer(&time4,991)){ // hẹn giờ
         ProcessTimerString(mqttMessage); // hẹn giờ cho ăn
         checkAndActivateTimers();  // kích hoạt các máy cho ăn đã hẹn giờ
     }
-    if (Timer(&time6, waitSpeaker)){ // loa
+    if (Timer(&time5, waitSpeaker)){ // loa
         if (speakerOn){
             callPet(); // gọi Pet
         }
     }
-    if (Timer(&time7, 1)){ // chờ 1 mili giây để nhảy sang step tiếp theo của động cơ. cần 4096 bước để quay hết một vòng
+    if (Timer(&time6, 1)){ // chờ 1 mili giây để nhảy sang step tiếp theo của động cơ. cần 4096 bước để quay hết một vòng
         if (motorOn){
             rotateMotor(); // quay động cơ
         }
     }
+    if (Timer(&time7, 5000)){ // thông báo
+        if (sensor[0]){
+            publishData("test", "MOTIONSENSOR OK");
+        }
+        if (sensor[1]){
+            publishData("test", "FOODSENSOR OK");
+        }
+        
+    }
+    
     
     // Đồng bộ thời gian mỗi 15 phút
     updateTimeSync();

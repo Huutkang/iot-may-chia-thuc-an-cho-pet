@@ -4,10 +4,10 @@
 #include <WiFiManager.h>
 
 // Cấu hình HiveMQ Broker
-const char* mqtt_server = "9812a8f30e3c404fa505703bbdce4b3b.s1.eu.hivemq.cloud";
+const char* mqtt_server = "2e39b02babb14c8ebf5dc699965ed7f7.s1.eu.hivemq.cloud";
 const int mqtt_port = 8883;
-const char* mqtt_user = "vuduychien";
-const char* mqtt_pass = "123456aA";
+const char* mqtt_user = "nguyenvanson";
+const char* mqtt_pass = "Nguyenvanson123@";
 
 // Chủ đề MQTT
 const char* control_topic = "control";
@@ -21,8 +21,8 @@ int count_connect_wifi = 0;
 
 // Trạng thái điều khiển
 bool isAuto = true;  // Chế độ tự động: true, thủ công: false
-bool motorStatus = false;  // Trạng thái động cơ (cho ăn): ON/OFF
-int foodAmount[4] = {1, 1, 1, 1};  // Lượng thức ăn cho từng bộ hẹn giờ (1 đến 10)
+bool status = false;  // Trạng thái động cơ (cho ăn): ON/OFF
+int foodAmount = 4;  // Lượng thức ăn cho từng bộ hẹn giờ (1 đến 10)
 
 
 // Định nghĩa MQTT và Wi-Fi
@@ -50,17 +50,16 @@ void callback(char* topic, byte* payload, unsigned int length) {
     if (String(topic) == control_topic) {
         if (message.startsWith("ON")) {
             isAuto = false;
-            motorStatus = true;  // Bật động cơ (cho ăn)
+            status = true;  // Bật động cơ (cho ăn)
         } else if (message == "AUTO") {
             isAuto = true;
-            motorStatus = false;  // Chế độ tự động
+            // status = false;  // Chế độ tự động
         }
     } else if (String(topic) == config_topic) {
         if (message.startsWith("CA")) {
-            int foodIndex = message.substring(2, 3).toInt() - 1;
-            int newFoodAmount = message.substring(4).toInt();
-            if (foodIndex >= 0 && foodIndex < 4 && newFoodAmount > 0 && newFoodAmount < 11) {
-                foodAmount[foodIndex] = newFoodAmount;
+            int newFoodAmount = message.substring(3).toInt();
+            if (newFoodAmount > 0 && newFoodAmount < 11) {
+                foodAmount = newFoodAmount;
                 // Serial.println("Cập nhật max_time[" + String(relayIndex) + "]: " + String(max_time[relayIndex]));
             }
         }else{

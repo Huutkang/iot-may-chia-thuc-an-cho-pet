@@ -9,6 +9,7 @@ int melodyLength = sizeof(melody) / sizeof(melody[0]);
 int pinSpeaker;
 int index_melody = 0; // Vị trí hiện tại trong mảng melody[]
 int waitSpeaker = melody[0]; // thời gian chờ để đến index tiếp theo trong mảng melody. dùng cho hàm Timer ở main.cpp
+int remainingCalls = 0;
 bool speakerOn = false;
 
 // Hàm khởi tạo chân cho loa
@@ -32,8 +33,16 @@ void callPet() {
     index_melody++;
     if (index_melody >= melodyLength) {
         index_melody = 0; // Quay lại từ đầu khi hết mảng
+        remainingCalls--;
+        if(remainingCalls == 0){
+            speakerOn = false;
+        }
     }
     waitSpeaker = melody[index_melody];
+}
+
+void setCalls(int number){
+    remainingCalls = number;
 }
 
 void resetSpeaker(){

@@ -44,8 +44,8 @@ void initializeTimers() {
     // Khởi tạo tất cả các hẹn giờ là không hoạt động
     for (int pump = 0; pump < 4; pump++) {
         for (int timer = 0; timer < 4; timer++) {
-            pumpTimers[pump][timer].startTime = 0;
-            pumpTimers[pump][timer].isActive = false;
+            feedingTimers[timer].startTime = 0;
+            feedingTimers[timer].isActive = false;
         }
     }
 }
