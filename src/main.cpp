@@ -42,9 +42,11 @@ unsigned long time6=0;
 unsigned long time7=0;
 
 bool hasSetup = false; // đã gọi thú cưng
+bool motionNoti = false; // thông báo cử động
+int totalFood = 0;
 
-
-// Hàm callback cho Software Timer
+// Hàm callback cho Software Timer (Timer phần mềm của hệ thống, esp8266 có duy nhất 1 timer phần cứng và được dùng cho wifi rồi)
+// dùng riêng cái này cho động cơ, dùng hàm Timer bên dưới thì nó lag. còn nếu tất cả dùng timer này thì cũng lag như nhau
 void motorTimerCallback(void *pArg) {
     if (motorOn) {
         rotateMotor(); // Quay động cơ
@@ -85,6 +87,8 @@ void updateStatus() {
         status = false;
         motorOn = true;
         hasSetup = false;
+        totalFood = totalFood + foodAmount;
+        publishData("food", String(foodAmount).c_str());
     }
 }
 
@@ -112,12 +116,7 @@ void loop() {
     }
     if (Timer(&time2,500)){
         readSensors();       
-        if (sensor[0]){
-            publishData("test", "MOTIONSENSOR OK");
-        }
-        if (!sensor[1]){
-            publishData("test", "FOODSENSOR OK");
-        }         
+        motionNoti = true;   
     }
     if (Timer(&time3,400)){ // thay đổi trạng thái
         updateStatus(); // thay đổi trạng thái máy cho ăn
@@ -126,10 +125,30 @@ void loop() {
     if (Timer(&time4,991)){ // hẹn giờ
         ProcessTimerString(mqttMessage); // hẹn giờ cho ăn
         checkAndActivateTimers();  // kích hoạt các máy cho ăn đã hẹn giờ
+        if (getSecondsSinceMidnight()<2){
+            totalFood = 0; // reset total food vào đầu ngày
+        }
     }
     if (Timer(&time5, waitSpeaker)){ // loa
         if (speakerOn){
             callPet(); // gọi Pet
+        }
+    }
+    if (Timer(&time6, 5000)){ // thông báo
+        if (motionNoti){
+            publishData("noti", "1");
+            motionNoti = false; // Reset
+        }else {
+            publishData("noti", "0");
+        }
+        if (sensor[1]){
+            publishData("food", "0"); // hơi ngược một tí. do cảm biến. 
+        }else{
+            publishData("food", "1");
+        }
+        if (totalFood>0){
+            String message = String("SUM ") + String(totalFood);
+            publishData("food", message.c_str()); // thông báo tổng số lượng thức thức ăn cho thú cưng trong ngày
         }
     }
     
@@ -137,3 +156,24 @@ void loop() {
     // Đồng bộ thời gian mỗi 15 phút
     updateTimeSync();
 }
+
+
+
+// logic:
+//    người dùng có thể tự nhấn nút cho ăn hoặc tự động theo lịch đã đặt trước (hẹn giờ cho ăn)
+//    chế độ tự động có thể bật tắt, mess ON là bật chế độ tự động, mess OFF là tắt chế độ tự động.
+//    khi bật hay tắt chế độ tự động người dùng vẫn hoàn toàn có thể cho ăn được bằng cách gửi mess FEED
+
+//    khi đến giờ cho ăn, hoặc người dùng cho ăn. máy sẽ kêu 5 lần.
+//    khi có pet đến, cảm biến chuyển động phát hiện, loa sẽ kêu thêm 1 lần nữa và động cơ quay khiến cho thú cưng có đồ ăn
+//    lượng thức ăn được đưa ra theo số lượng đã cài đặt trước (từ 1 đến 10). 
+//    khi hết thức ăn, thức ăn sẽ không che được cảm biến hồng ngoại đi nữa. khi đó cảm biến hồng ngoại sẽ phát hiện được hết 
+//    thức ăn và gửi thông báo đến người dùng. 
+//    khi phát hiện chuyển động thì sẽ có thông báo trên web rằng, có lẽ thú cưng bạn đang đói, có nên cho ăn không.
+
+//    khi cho ăn, sẽ có thông báo lượng thức ăn đã cho
+//    sẽ có thông báo tổng lượng thức ăn hàng ngày sau mỗi 5s
+
+//    có 4 bộ hẹn giờ cho ăn, trên web thì dùng có 3. có thể cài đặt bất kể giờ nào trong ngày. nếu giờ hẹn đã qua thì cho ăn ngày hôm sau
+//    có thể bật tắt bất kể bộ hẹn giờ nào
+

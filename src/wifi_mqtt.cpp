@@ -22,7 +22,7 @@ int count_connect_wifi = 0;
 // Trạng thái điều khiển
 bool isAuto = true;  // Chế độ tự động: true, thủ công: false
 bool status = false;  // Trạng thái động cơ (cho ăn): ON/OFF
-int foodAmount = 4;  // Lượng thức ăn cho từng bộ hẹn giờ (1 đến 10)
+int foodAmount = 5;  // Lượng thức ăn cho ăn trong mỗi lần
 
 
 // Định nghĩa MQTT và Wi-Fi
@@ -48,12 +48,12 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
 
     if (String(topic) == control_topic) {
-        if (message.startsWith("ON")) {
-            isAuto = false;
-            status = true;  // Bật động cơ (cho ăn)
-        } else if (message == "AUTO") {
-            isAuto = true;
-            // status = false;  // Chế độ tự động
+        if (message.startsWith("FEED")) {
+            status = true;  // cho thú cưng ăn
+        } else if (message.startsWith("ON")) {
+            isAuto = true; // Bật tự động cho thú cưng ăn
+        } else if (message == "OFF") {
+            isAuto = false; // Tắt tự động cho thú cưng ăn
         }
     } else if (String(topic) == config_topic) {
         if (message.startsWith("CA")) {

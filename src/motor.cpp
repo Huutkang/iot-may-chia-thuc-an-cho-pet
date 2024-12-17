@@ -58,5 +58,8 @@ void rotateMotor() {
     }else{
         motorOn = false;
         totalSteps = 0;
+        for (int i = 0; i < 4; i++) {
+            digitalWrite(MT[i], LOW); // Tắt motor
+        }
     }
 }
