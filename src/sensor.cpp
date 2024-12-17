@@ -16,5 +16,7 @@ void setupSensors(int MOTIONSENSOR, int FOODSENSOR) {
 void readSensors() {
     sensor[0] = digitalRead(ss[0]);
     sensor[1] = digitalRead(ss[1]);
+    Serial.println(sensor[0]);
+    Serial.println(sensor[1]);
 }
 

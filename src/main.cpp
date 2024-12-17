@@ -1,4 +1,8 @@
 #include <Arduino.h>
+extern "C" {
+  #include "osapi.h"
+  #include "os_type.h"
+}
 #include "wifi_mqtt.h"
 #include "sensor.h"
 #include "motor.h"
@@ -10,6 +14,8 @@
 // vd: #define abc xyz
 // trình biên dịch sẽ đổi tên những chỗ nào có abc bằng xyz trong mã nguồn trước khi biên dịch
 
+os_timer_t motorTimer; // Khai báo Software Timer
+
 // Khai báo các chân điều khiển động cơ
 #define IN1 D6 
 #define IN2 D8
@@ -19,10 +25,11 @@
 // Cái còi để gọi thú cưng
 #define SPEAKER D0
 
-// Cảm biến chuyển động
-#define MOTIONSENSOR D5
 // Cảm biến xem còn hay hết thức ăn
-#define FOODSENSOR D7
+#define FOODSENSOR D5
+// Cảm biến chuyển động
+#define MOTIONSENSOR D7
+
 
 // các biến lưu giữ thời gian, phục vụ cho hàm hẹn giờ
 unsigned long current_time;
@@ -35,6 +42,14 @@ unsigned long time6=0;
 unsigned long time7=0;
 
 bool hasSetup = false; // đã gọi thú cưng
+
+
+// Hàm callback cho Software Timer
+void motorTimerCallback(void *pArg) {
+    if (motorOn) {
+        rotateMotor(); // Quay động cơ
+    }
+}
 
 // với kiểu dữ liệu unsigned long: 10 - 4294967295 = 11 nên không lo tràn số ở hàm millis nhé
 // Ưu điểm: không dùng delay
@@ -82,6 +97,10 @@ void setup() {
     setupWiFi();                  // Cấu hình WiFi
     setupMQTT();                 // Cấu hình MQTT 
     setupTimeSync();
+
+    // Cấu hình Software Timer cho động cơ
+    os_timer_setfn(&motorTimer, motorTimerCallback, NULL);
+    os_timer_arm(&motorTimer, 1, true); // Thời gian là 1ms, lặp lại liên tục
 }
 
 void loop() {
@@ -92,7 +111,13 @@ void loop() {
         }
     }
     if (Timer(&time2,500)){
-        readSensors();                
+        readSensors();       
+        if (sensor[0]){
+            publishData("test", "MOTIONSENSOR OK");
+        }
+        if (!sensor[1]){
+            publishData("test", "FOODSENSOR OK");
+        }         
     }
     if (Timer(&time3,400)){ // thay đổi trạng thái
         updateStatus(); // thay đổi trạng thái máy cho ăn
@@ -106,20 +131,6 @@ void loop() {
         if (speakerOn){
             callPet(); // gọi Pet
         }
-    }
-    if (Timer(&time6, 1)){ // chờ 1 mili giây để nhảy sang step tiếp theo của động cơ. cần 4096 bước để quay hết một vòng
-        if (motorOn){
-            rotateMotor(); // quay động cơ
-        }
-    }
-    if (Timer(&time7, 5000)){ // thông báo
-        if (sensor[0]){
-            publishData("test", "MOTIONSENSOR OK");
-        }
-        if (sensor[1]){
-            publishData("test", "FOODSENSOR OK");
-        }
-        
     }
     
     

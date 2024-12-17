@@ -36,6 +36,7 @@ void callPet() {
         remainingCalls--;
         if(remainingCalls == 0){
             speakerOn = false;
+            digitalWrite(pinSpeaker, LOW);
         }
     }
     waitSpeaker = melody[index_melody];

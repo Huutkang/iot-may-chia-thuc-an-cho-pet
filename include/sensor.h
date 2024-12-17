@@ -2,7 +2,7 @@
 #define SENSOR_H
 
 
-// extern int SS[2];
+extern int ss[2];
 extern bool sensor[2];
 
 void setupSensors(int MOTIONSENSOR, int FOODSENSOR);
