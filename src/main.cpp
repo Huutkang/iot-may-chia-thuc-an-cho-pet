@@ -88,7 +88,7 @@ void updateStatus() {
         motorOn = true;
         hasSetup = false;
         totalFood = totalFood + foodAmount;
-        publishData("food", String(foodAmount).c_str());
+        publishData("chart", String(foodAmount).c_str());
         hungry = 1440;
     }
 }
@@ -151,7 +151,7 @@ void loop() {
         }
         if (totalFood>0){
             String message = String("SUM ") + String(totalFood);
-            publishData("food", message.c_str()); // thông báo tổng số lượng thức thức ăn cho thú cưng trong ngày
+            publishData("chart", message.c_str()); // thông báo tổng số lượng thức thức ăn cho thú cưng trong ngày
         }
         if (hungry>0){
             hungry--;

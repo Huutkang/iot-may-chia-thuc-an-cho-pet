@@ -76,7 +76,7 @@ void connect_MQTT() {
             mqttClient.subscribe(control_topic);
             mqttClient.subscribe(config_topic);
         } else {
-            Serial.print("Lỗi MQTT: ");
+            // Serial.print("Lỗi MQTT: ");
             // Serial.println(mqttClient.state());
             if (WiFi.status() != WL_CONNECTED || count_connect_wifi > 5) {
                 count_connect_wifi = 0;
