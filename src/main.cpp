@@ -34,9 +34,6 @@ unsigned long time5=0;
 unsigned long time6=0;
 unsigned long time7=0;
 
-int t[4] = {max_time[0], max_time[1], max_time[2], max_time[3]};
-int ActivationTime = 60;
-bool count_status[4] = {false, false, false, false};
 
 
 // với kiểu dữ liệu unsigned long: 10 - 4294967295 = 11 nên không lo tràn số ở hàm millis nhé
@@ -53,32 +50,12 @@ int Timer(unsigned long *time, int wait){
 }
 
 void updateStatus() {
-    for (int i = 0; i < 4; i++) {
-        if (!isAuto[i]) {
-            // Nếu không ở chế độ tự động, bỏ qua máy bơm này
-            continue;
-        }
-        if (t[i]<0){
-            status[i] = false;
-        }
-
-        if (sensor[i] <= min_moisture[i]) {
-            if (!count_status[i]){
-                count_status[i] = true;
-                status[i] = true;
-            }
-        } else if (sensor[i] >= max_moisture[i]) {
-            status[i] = false; // Không tưới
-        } else {
-            // Độ ẩm nằm trong khoảng 60-90
-            if (watering_timer[i]) {
-                if (!count_status[i]){
-                    count_status[i] = true;
-                    status[i] = true;
-                }
-                watering_timer[i] = false; // Reset lại bộ hẹn giờ
-            }
-        }
+    if (!isAuto) {
+        return;
+    }
+    if (feeding_timer) {
+        motorStatus = true;
+        feeding_timer = false; // Reset lại bộ hẹn giờ
     }
 }
 
@@ -100,33 +77,22 @@ void loop() {
             connect_MQTT();
         }
     }
-    if (Timer(&time2,5000)){ // đọc, gửi, in giá trị cảm biến
+    if (Timer(&time2,500)){
         readSensors();                
-        for (int i = 0; i < 4; i++) {
-            String message = String(i + 1) + " " + String(sensor[i]);
-            publishData("RH", message.c_str());
-        }
-        String pump_status = String(status[0]) + String(status[1]) + String(status[2]) + String(status[3]);
-        publishData("PS", pump_status.c_str());
     }
-    if (Timer(&time3,500)){ // thực thi bật tắt máy bơm
-        manageMotor(MT, status);
+    if (Timer(&time3,500)){
+        // tính toán góc
+
+        // bật động cơ
+        setRotate(float revolutions);
     }
     if (Timer(&time4,990)){ // thay đổi trạng thái
-        updateStatus(); // thay đổi trạng thái máy bơm
-        for (int i=0; i<4; i++){ // kiểm soát thời gian tưới tối đa và thời gian tối thiểu từ khi tắt đến khi bật (chế độ auto)
-            if (count_status[i]){
-                t[i]--; // bắt buộc để timer ở đây là 1 giây để hoạt động bình thường
-            }
-            if (t[i]<-ActivationTime){
-                count_status[i]=false;
-                t[i]=max_time[i];
-            }
-        }
+        updateStatus(); // thay đổi trạng thái máy cho ăn
+        
     }
     if (Timer(&time5,991)){ // hẹn giờ
-        ProcessTimerString(mqttMessage); // hẹn giờ bơm
-        checkAndActivateTimers();  // kích hoạt các máy bơm đã hẹn giờ
+        ProcessTimerString(mqttMessage); // hẹn giờ cho ăn
+        checkAndActivateTimers();  // kích hoạt các máy cho ăn đã hẹn giờ
     }
     if (Timer(&time6, waitSpeaker)){ // loa
         if (speakerOn){
