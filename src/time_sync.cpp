@@ -3,8 +3,11 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
 
+
+
 // Biến trạng thái của động cơ
 bool feeding_timer = false;
+
 
 struct Timer {
     unsigned long startTime; // Thời điểm kích hoạt (giây từ đầu ngày)
@@ -39,11 +42,15 @@ unsigned long getSecondsSinceMidnight() {
 
 void initializeTimers() {
     // Khởi tạo tất cả các hẹn giờ là không hoạt động
-    for (int timer = 0; timer < 4; timer++) {
-        feedingTimers[timer].startTime = 0;
-        feedingTimers[timer].isActive = false;
+    for (int pump = 0; pump < 4; pump++) {
+        for (int timer = 0; timer < 4; timer++) {
+            pumpTimers[pump][timer].startTime = 0;
+            pumpTimers[pump][timer].isActive = false;
+        }
     }
 }
+
+
 
 // Thiết lập hẹn giờ cho động cơ
 void SetFeedingTimer(int timerIndex, unsigned long startTimeInSeconds) {
@@ -94,6 +101,7 @@ void ProcessTimerString(String& input) {
     // Xóa chuỗi sau khi xử lý
     input = "";
 }
+
 
 void checkAndActivateTimers() {
     unsigned long currentSeconds = getSecondsSinceMidnight();

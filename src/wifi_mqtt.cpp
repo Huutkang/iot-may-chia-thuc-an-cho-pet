@@ -13,29 +13,34 @@ const char* mqtt_pass = "123456aA";
 const char* control_topic = "control";
 const char* config_topic = "config";
 
-// Trạng thái điều khiển
-bool isAuto = true;  // Chế độ tự động: true, thủ công: false
-bool motorStatus = false;  // Trạng thái động cơ (cho ăn): ON/OFF
-int food_amount[4] = {1, 1, 1, 1};  // Lượng thức ăn cho từng bộ hẹn giờ (1 đến 10)
-
 // Biến MQTT
 bool mqtt_connected = false;
 String mqttMessage = "";
 
-// Định nghĩa MQTT và Wi-Fi
-WiFiClientSecure espClient;          
-PubSubClient mqttClient(espClient);
+int count_connect_wifi = 0;
 
-// Kết nối Wi-Fi
+// Trạng thái điều khiển
+bool isAuto = true;  // Chế độ tự động: true, thủ công: false
+bool motorStatus = false;  // Trạng thái động cơ (cho ăn): ON/OFF
+int foodAmount[4] = {1, 1, 1, 1};  // Lượng thức ăn cho từng bộ hẹn giờ (1 đến 10)
+
+
+// Định nghĩa MQTT và Wi-Fi
+WiFiClientSecure espClient;          // Đối tượng WiFiClient
+PubSubClient mqttClient(espClient);  // Đối tượng MQTT client
+
 void setupWiFi() {
     WiFiManager wifiManager;
+
+    // Tự động kết nối hoặc tạo Access Point
     if (!wifiManager.autoConnect("ESP8266_AP")) {
+        // Serial.println("Không kết nối được Wi-Fi");
         delay(3000);
-        ESP.restart();
+        ESP.restart();  // Khởi động lại thiết bị
     }
+    // Serial.println("Đã kết nối Wi-Fi!");
 }
 
-// Hàm callback xử lý message MQTT
 void callback(char* topic, byte* payload, unsigned int length) {
     String message = "";
     for (unsigned int i = 0; i < length; i++) {
@@ -43,43 +48,52 @@ void callback(char* topic, byte* payload, unsigned int length) {
     }
 
     if (String(topic) == control_topic) {
-        if (message == "ON") {
+        if (message.startsWith("ON")) {
             isAuto = false;
             motorStatus = true;  // Bật động cơ (cho ăn)
         } else if (message == "AUTO") {
             isAuto = true;
             motorStatus = false;  // Chế độ tự động
-        } else if (message.endsWith("off")) { 
-            int timerIndex = message.substring(0, 1).toInt() - 1; // Lấy số hẹn giờ
-            if (timerIndex >= 0 && timerIndex < 4) {
-                food_amount[timerIndex] = 0; // Tắt bộ hẹn giờ
-            }
         }
-    } 
-    else if (String(topic) == config_topic) {
-        int timerIndex = message.substring(0, 1).toInt() - 1;  // Lấy số bộ hẹn giờ
-        int amount = message.substring(2).toInt();  // Lấy số lượng thức ăn
-        if (timerIndex >= 0 && timerIndex < 4 && amount >= 1 && amount <= 10) {
-            food_amount[timerIndex] = amount;
+    } else if (String(topic) == config_topic) {
+        if (message.startsWith("CA")) {
+            int foodIndex = message.substring(2, 3).toInt() - 1;
+            int newFoodAmount = message.substring(4).toInt();
+            if (foodIndex >= 0 && foodIndex < 4 && newFoodAmount > 0 && newFoodAmount < 11) {
+                foodAmount[foodIndex] = newFoodAmount;
+                // Serial.println("Cập nhật max_time[" + String(relayIndex) + "]: " + String(max_time[relayIndex]));
+            }
+        }else{
+            mqttMessage = message; // Lưu lại toàn bộ chuỗi nhận được, phục vụ cho bộ hẹn giờ
         }
     }
 }
 
-// Kết nối MQTT
 void connect_MQTT() {
     if (!mqttClient.connected()) {
+        Serial.print("Đang kết nối MQTT...");
         if (mqttClient.connect("ESP8266Client", mqtt_user, mqtt_pass)) {
             mqtt_connected = true;
+            // Serial.println("Đã kết nối MQTT!");
             mqttClient.subscribe(control_topic);
             mqttClient.subscribe(config_topic);
         } else {
-            mqtt_connected = false;
-            delay(5000);
+            Serial.print("Lỗi MQTT: ");
+            // Serial.println(mqttClient.state());
+            if (WiFi.status() != WL_CONNECTED || count_connect_wifi > 5) {
+                count_connect_wifi = 0;
+                // Serial.println("Lỗi wifi");
+                WiFi.reconnect();
+            } else {
+                count_connect_wifi++;
+            }
+            for (int i = 0; i < 4; i++) {
+                isAuto = true;
+            }
         }
     }
 }
 
-// Setup MQTT
 void setupMQTT() {
     espClient.setInsecure();
     mqttClient.setServer(mqtt_server, mqtt_port);
@@ -87,43 +101,21 @@ void setupMQTT() {
     connect_MQTT();
 }
 
+bool publishData(const char* topic, const char* payload) {
+    mqttClient.loop();
+    if (mqttClient.connected()) {
+        mqttClient.publish(topic, payload);
+        return true;
+    } else {
+        mqtt_connected = false;
+        return false;
+    }
+}
+
 void handleMQTT() {
     if (mqttClient.connected()) {
         mqttClient.loop();
     } else {
-        connect_MQTT();
+        mqtt_connected = false;
     }
-}
-
-void setup() {
-    Serial.begin(115200);
-    setupWiFi();
-    setupMQTT();
-}
-
-void loop() {
-    handleMQTT();
-
-    // Thủ công: Cho ăn nếu motorStatus = true
-    if (!isAuto && motorStatus) {
-        Serial.println("Đang cho ăn (thủ công)...");
-        delay(2000);  // Giả lập thời gian hoạt động động cơ
-        motorStatus = false;  // Tắt động cơ sau khi cho ăn xong
-        Serial.println("Hoàn thành cho ăn.");
-    }
-
-    // Tự động: Kiểm tra bộ hẹn giờ và thực hiện cho ăn
-    if (isAuto) {
-        for (int i = 0; i < 4; i++) {
-            if (food_amount[i] > 0) {
-                Serial.print("Bộ hẹn giờ ");
-                Serial.print(i + 1);
-                Serial.print(" đang cho ăn với lượng: ");
-                Serial.println(food_amount[i]);
-                delay(1000 * food_amount[i]);  // Giả lập cho ăn
-                food_amount[i] = 0;  // Reset bộ hẹn giờ sau khi hoàn thành
-            }
-        }
-    }
-    delay(1000);  // Chờ 1 giây trước vòng lặp tiếp theo
 }
