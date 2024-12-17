@@ -7,7 +7,7 @@
 
 // Biến trạng thái của động cơ
 bool feeding_timer = false;
-
+int locks[4] = {0, 0, 0, 0};
 
 struct Timer {
     unsigned long startTime; // Thời điểm kích hoạt (giây từ đầu ngày)
@@ -107,15 +107,20 @@ void checkAndActivateTimers() {
     unsigned long currentSeconds = getSecondsSinceMidnight();
 
     for (int timer = 0; timer < 4; timer++) {
+        if (locks[timer]>0){
+            locks[timer]--;
+        }
         if (feedingTimers[timer].isActive &&
-            feedingTimers[timer].startTime + 60 > currentSeconds && // Không được lớn hơn quá 1 phút
+            feedingTimers[timer].startTime + 20 > currentSeconds && // Không được lớn hơn quá 1 phút. 1 phút phòng lệch giờ so với thực tế
             currentSeconds >= feedingTimers[timer].startTime) {
-
-            // Kích hoạt động cơ
-            feeding_timer = true;
-            feedingTimers[timer].isActive = false; // Vô hiệu hóa hẹn giờ sau khi kích hoạt
-
-            // Serial.println("Động cơ đã được kích hoạt bởi hẹn giờ " + String(timer));
+            
+            if (locks[timer]<=0){
+                // Kích hoạt động cơ
+                feeding_timer = true;
+                locks[timer] = 70;
+                // nếu không muốn hẹn giờ hàng ngày thì bỏ comment cái này đi
+                // feedingTimers[timer].isActive = false; // Vô hiệu hóa hẹn giờ sau khi kích hoạt
+            }
         }
     }
 }
