@@ -39,7 +39,6 @@ unsigned long time3=0;
 unsigned long time4=0;
 unsigned long time5=0;
 unsigned long time6=0;
-unsigned long time7=0;
 
 bool hasSetup = false; // đã gọi thú cưng
 bool motionNoti = false; // thông báo cử động
@@ -117,8 +116,10 @@ void loop() {
         }
     }
     if (Timer(&time2,500)){
-        readSensors();       
-        motionNoti = true;   
+        readSensors();
+        if (sensor[0]){
+            motionNoti = true;   
+        }  
     }
     if (Timer(&time3,400)){ // thay đổi trạng thái
         updateStatus(); // thay đổi trạng thái máy cho ăn

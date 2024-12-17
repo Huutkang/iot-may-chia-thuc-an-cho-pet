@@ -60,7 +60,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
             int newFoodAmount = message.substring(3).toInt();
             if (newFoodAmount > 0 && newFoodAmount < 11) {
                 foodAmount = newFoodAmount;
-                // Serial.println("Cập nhật max_time[" + String(relayIndex) + "]: " + String(max_time[relayIndex]));
             }
         }else{
             mqttMessage = message; // Lưu lại toàn bộ chuỗi nhận được, phục vụ cho bộ hẹn giờ
